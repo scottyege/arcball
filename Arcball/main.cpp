@@ -26,6 +26,7 @@ using std::cout;
 
 /* ADD GLOBAL VARIABLES HERE LATER */
 GLuint texture_id;
+GLuint texture_id_2;
 GLuint program;
 
 xDModel *xdModel = NULL;
@@ -68,13 +69,16 @@ struct ShaderUniformLoc
 
     GLuint lightModelMatrix;
     GLuint lightPosition;
+    GLuint lightSpecular;
     GLuint lightDiffuse;
     GLuint lightAmbient;
 
+    GLuint mat_specular;
     GLuint mat_diffuse;
     GLuint mat_ambient;
 
     GLuint sampler;
+	GLuint sampler2;
 } uniformLoc;
 
 struct Buffers
@@ -96,20 +100,20 @@ struct PointLight
 {
     glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
     glm::vec4(0.3f, 0.3f, 0.3f, 1.0f),
-    glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-    glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)
+    glm::vec4(0.8f, 0.8f, 0.8f, 1.0f),
+    glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)
 };
 
 xDMaterial modelMat =
 {
     glm::vec4(0.5f,0.5f,0.5f,1.0f),
-    glm::vec4(0.5f,0.5f,0.5f,1.0f),
-    glm::vec4(0.5f,0.5f,0.5f,1.0f)
+    glm::vec4(0.8f,0.8f,0.8f,1.0f),
+    glm::vec4(1.0f,1.0f,1.0f,1.0f)
 };
 
 void loadTexture()
 {
-
+    /*
     int width, height, channels;
     unsigned char *ht_map = SOIL_load_image
                             (
@@ -124,7 +128,25 @@ void loadTexture()
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    */
+	//fiber_bump.jpg
+    glActiveTexture(GL_TEXTURE0);
+    texture_id = SOIL_load_OGL_texture
+                        (
+                            "fiber.jpg",
+                            SOIL_LOAD_AUTO,
+                            SOIL_CREATE_NEW_ID,
+                            SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
+                        );
 
+	glActiveTexture(GL_TEXTURE1);
+    texture_id_2 = SOIL_load_OGL_texture
+                        (
+                            "fiber_bump.jpg",
+                            SOIL_LOAD_AUTO,
+                            SOIL_CREATE_NEW_ID,
+                            SOIL_FLAG_INVERT_Y | SOIL_FLAG_TEXTURE_REPEATS
+                        );
 }
 
 void calCameraSet()
@@ -186,13 +208,16 @@ int init_resources(void)
         || !getUniformLoc(program, "projMatrix", uniformLoc.projMatrix)
         || !getUniformLoc(program, "viewMatrix", uniformLoc.viewMatrix)
         || !getUniformLoc(program, "normalMatrix", uniformLoc.normalMatrix)
+        || !getUniformLoc(program, "light_specular", uniformLoc.lightSpecular)
         || !getUniformLoc(program, "light_diffuse", uniformLoc.lightDiffuse)
         || !getUniformLoc(program, "lightModelMatrix", uniformLoc.lightModelMatrix)
         || !getUniformLoc(program, "lightPosition", uniformLoc.lightPosition)
+        || !getUniformLoc(program, "mat_specular", uniformLoc.mat_specular)
         || !getUniformLoc(program, "mat_diffuse", uniformLoc.mat_diffuse)
         || !getUniformLoc(program, "mat_ambient", uniformLoc.mat_ambient)
         || !getUniformLoc(program, "light_ambient", uniformLoc.lightAmbient)
         || !getUniformLoc(program, "sampler", uniformLoc.sampler)
+		|| !getUniformLoc(program, "sampler2", uniformLoc.sampler2)
     )
         return 0;
 
@@ -228,10 +253,12 @@ void onDisplay()
     glEnableVertexAttribArray(attriLoc.vObjNormal);
     glEnableVertexAttribArray(attriLoc.vTex);
 
-
+    glUniform4fv(uniformLoc.lightSpecular, 1, glm::value_ptr(plight.specular));
     glUniform4fv(uniformLoc.lightDiffuse, 1, glm::value_ptr(plight.diffuse));
     glUniform4fv(uniformLoc.lightAmbient, 1, glm::value_ptr(plight.ambient));
     glUniform4fv(uniformLoc.lightPosition, 1, glm::value_ptr(plight.position));
+
+    glUniform4fv(uniformLoc.mat_specular, 1, glm::value_ptr(modelMat.specular));
     glUniform4fv(uniformLoc.mat_diffuse, 1, glm::value_ptr(modelMat.diffuse));
     glUniform4fv(uniformLoc.mat_ambient, 1, glm::value_ptr(modelMat.ambient));
 
@@ -241,6 +268,14 @@ void onDisplay()
     glUniformMatrix4fv(uniformLoc.viewMatrix, 1, GL_FALSE, glm::value_ptr(viewMatrix));
     glUniformMatrix4fv(uniformLoc.projMatrix, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
     glUniformMatrix3fv(uniformLoc.normalMatrix, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texture_id);
+	glUniform1i(uniformLoc.sampler, 0);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, texture_id_2);
+	glUniform1i(uniformLoc.sampler2, 1);
 
     GLMmodel *m = xdModel->glmModel;
 
